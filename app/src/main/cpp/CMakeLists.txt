@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.6.4111459 )
+cmake_minimum_required(VERSION 3.10.2 )
 
 SET(FFMPEG ${CMAKE_SOURCE_DIR}/ffmpeg)#ffmpeg路径
 SET(RTMP ${CMAKE_SOURCE_DIR}/rtmp)#rtmp路径
