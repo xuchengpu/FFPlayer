@@ -32,11 +32,11 @@ public class MainActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onError(int code) {
+            public void onError(String errMsg) {
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        Toast.makeText(MainActivity.this, "onError code="+code, Toast.LENGTH_SHORT).show();
+                        Toast.makeText(MainActivity.this, "onError errMsg="+errMsg, Toast.LENGTH_SHORT).show();
                     }
                 });
                }

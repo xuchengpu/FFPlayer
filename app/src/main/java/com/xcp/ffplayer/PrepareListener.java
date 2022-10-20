@@ -7,5 +7,5 @@ package com.xcp.ffplayer;
  */
 public interface PrepareListener {
     void onPrepared();
-    void onError(int code);
+    void onError(String errMsg);
 }

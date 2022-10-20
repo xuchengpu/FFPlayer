@@ -42,14 +42,13 @@ void FFPlayer::prepare_() {
      * 4，各种设置：例如：Http 连接超时， 打开rtmp的超时  AVDictionary **options
      */
     int r = avformat_open_input(&avFormatContext, data_source, 0, &avDictionary);
-
     // 释放字典
     av_dict_free(&avDictionary);
     if (r != 0) {
         LOGD(TAG, "avformat_open_input faile");
         //打开失败回调 把错误信息反馈给Java
         if (helper){
-            helper->onError(THREAD_CHILD,r);
+            helper->onError(THREAD_CHILD,FFMPEG_CAN_NOT_OPEN_URL);
         }
         return;
     }
@@ -59,7 +58,7 @@ void FFPlayer::prepare_() {
         //解析失败
         LOGD(TAG, "avformat_find_stream_info faile");
         if (helper){
-            helper->onError(THREAD_CHILD,r);
+            helper->onError(THREAD_CHILD,FFMPEG_CAN_NOT_FIND_STREAMS);
         }
         return;
     }
@@ -71,13 +70,18 @@ void FFPlayer::prepare_() {
         AVCodecParameters *codecpar=pAvStream->codecpar;
         //第六步：（根据上面的【参数】）获取编解码器
         AVCodec * avCodec= avcodec_find_decoder(codecpar->codec_id);
+        if (!avCodec){
+            if (helper){
+                helper->onError(THREAD_CHILD,FFMPEG_FIND_DECODER_FAIL);
+            }
+        }
         //第七步：编解码器 上下文 （这个才是真正干活的）
         AVCodecContext * avCodecContext=avcodec_alloc_context3(avCodec);
         if (!avCodecContext){
             //把错误信息反馈给Java
             LOGD(TAG, "avcodec_alloc_context3 faile");
             if (helper){
-                helper->onError(THREAD_CHILD,r);
+                helper->onError(THREAD_CHILD,FFMPEG_ALLOC_CODEC_CONTEXT_FAIL);
             }
             return;
         }
@@ -87,7 +91,7 @@ void FFPlayer::prepare_() {
             //把错误信息反馈给Java
             LOGD(TAG, "avcodec_parameters_to_context faile");
             if (helper){
-                helper->onError(THREAD_CHILD,r);
+                helper->onError(THREAD_CHILD,FFMPEG_CODEC_CONTEXT_PARAMETERS_FAIL);
             }
             return;
         }
@@ -97,10 +101,11 @@ void FFPlayer::prepare_() {
             //把错误信息反馈给Java
             LOGD(TAG, "avcodec_open2 faile");
             if (helper){
-                helper->onError(THREAD_CHILD,r);
+                helper->onError(THREAD_CHILD,FFMPEG_OPEN_DECODER_FAIL);
             }
             return;
         }
+        //第十步：从解码器参数中获取流的类型 视频、音频
         if (codecpar->codec_type==AVMEDIA_TYPE_AUDIO){
             audioChannel= new AudioChannel();
         }else if (codecpar->codec_type==AVMEDIA_TYPE_VIDEO){
@@ -112,11 +117,11 @@ void FFPlayer::prepare_() {
         //把错误信息反馈给Java
         LOGD(TAG, "audioChannel is null or videoChannel is null ");
         if (helper){
-            helper->onError(THREAD_CHILD,r);
+            helper->onError(THREAD_CHILD,FFMPEG_NOMEDIA);
         }
         return;
     }
-    //走到这里说明成功了，通知Java层
+    //第十二步：走到这里说明成功了，通知Java层
     if (helper){
         helper->onPrepared(THREAD_CHILD);
     }
