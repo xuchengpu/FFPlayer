@@ -10,6 +10,8 @@ class VideoChannel {
 
 public:
     VideoChannel();
+
+    void start();
 };
 
 

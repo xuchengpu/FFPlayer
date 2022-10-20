@@ -7,3 +7,7 @@
 AudioChannel::AudioChannel() {
 
 }
+
+void AudioChannel::start() {
+
+}

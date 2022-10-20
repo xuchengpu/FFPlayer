@@ -7,3 +7,7 @@
 VideoChannel::VideoChannel() {
 
 }
+
+void VideoChannel::start() {
+
+}

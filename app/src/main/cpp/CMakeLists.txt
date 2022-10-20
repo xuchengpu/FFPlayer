@@ -10,7 +10,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -L${FFMPEG}/libs/${CMAKE_ANDROID_ARCH_AB
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -L${RTMP}/libs/${CMAKE_ANDROID_ARCH_ABI}") # rtmp库指定
 
 #批量导入源文件
-file(GLOB srcFiles *.cpp)
+file(GLOB srcFiles *.cpp )
 
 add_library(native-lib #生成的库名称
         SHARED #动态库

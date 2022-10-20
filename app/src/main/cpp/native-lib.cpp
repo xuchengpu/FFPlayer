@@ -29,7 +29,9 @@ Java_com_xcp_ffplayer_FFPlayer_nativePrepare(JNIEnv *env, jobject thiz, jstring 
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_xcp_ffplayer_FFPlayer_nativeStart(JNIEnv *env, jobject thiz) {
-
+    if (mplayer){
+        mplayer->start();
+    }
 
 }
 extern "C"

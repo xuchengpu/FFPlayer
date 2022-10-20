@@ -125,6 +125,27 @@ void FFPlayer::prepare_() {
     if (helper){
         helper->onPrepared(THREAD_CHILD);
     }
+}
 
+void* start_task(void* args){
+    auto * ffPlayer=static_cast<FFPlayer*> (args);
+    ffPlayer->start_();
+    return 0;
+}
+
+void FFPlayer::start(){
+    isplaying=1;
+    if (videoChannel){
+        videoChannel->start();
+    }
+
+    if (audioChannel){
+        audioChannel->start();
+    }
+    //开启子线程，执行真正的开始任务，把音频和视频的压缩包加入到队列里面去
+    pthread_create(&pid_start,NULL,start_task,this);
+}
+
+void FFPlayer::start_(){
 
 }

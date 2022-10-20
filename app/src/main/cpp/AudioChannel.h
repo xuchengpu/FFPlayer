@@ -10,6 +10,8 @@ class AudioChannel {
 
 public:
     AudioChannel();
+
+    void start();
 };
 
 
