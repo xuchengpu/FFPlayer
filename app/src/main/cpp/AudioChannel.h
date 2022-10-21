@@ -4,12 +4,13 @@
 
 #ifndef FFPLAYER_AUDIOCHANNEL_H
 #define FFPLAYER_AUDIOCHANNEL_H
+#include "BaseChannel.h"
 
-
-class AudioChannel {
+class AudioChannel :public BaseChannel{
 
 public:
-    AudioChannel();
+    AudioChannel(int stream_index,AVCodecContext *avCodecContext );
+    ~AudioChannel();
 
     void start();
 };

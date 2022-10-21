@@ -4,7 +4,10 @@
 
 #include "VideoChannel.h"
 
-VideoChannel::VideoChannel() {
+VideoChannel::VideoChannel(int stream_index,AVCodecContext *avCodecContext): BaseChannel(stream_index,avCodecContext) {
+
+}
+VideoChannel::~VideoChannel() {
 
 }
 

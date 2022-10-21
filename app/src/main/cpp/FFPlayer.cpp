@@ -107,9 +107,9 @@ void FFPlayer::prepare_() {
         }
         //第十步：从解码器参数中获取流的类型 视频、音频
         if (codecpar->codec_type==AVMEDIA_TYPE_AUDIO){
-            audioChannel= new AudioChannel();
+            audioChannel= new AudioChannel(i,avCodecContext);
         }else if (codecpar->codec_type==AVMEDIA_TYPE_VIDEO){
-            videoChannel=new VideoChannel();
+            videoChannel=new VideoChannel(i,avCodecContext);
         }
     }//循环结束
     //第十一步: 如果流中 没有音频 也没有 视频 【健壮性校验】
@@ -147,5 +147,9 @@ void FFPlayer::start(){
 }
 
 void FFPlayer::start_(){
-
+    while (isplaying){
+        //取出压缩包放到压缩包队列里面去 可能是音频的也可能是视频的
+        AVPacket * packet=av_packet_alloc();
+        int ret=av_read_frame(avFormatContext,packet);
+    }
 }

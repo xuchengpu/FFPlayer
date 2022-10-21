@@ -5,6 +5,7 @@ SET(RTMP ${CMAKE_SOURCE_DIR}/rtmp)#rtmp路径
 
 #导入ffmpeg头文件
 include_directories(${FFMPEG}/include)
+
 #指定库地址，系统会自动去这个地址下寻找目标库
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -L${FFMPEG}/libs/${CMAKE_ANDROID_ARCH_ABI}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -L${RTMP}/libs/${CMAKE_ANDROID_ARCH_ABI}") # rtmp库指定

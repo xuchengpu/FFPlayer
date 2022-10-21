@@ -5,11 +5,12 @@
 #ifndef FFPLAYER_VIDEOCHANNEL_H
 #define FFPLAYER_VIDEOCHANNEL_H
 
-
-class VideoChannel {
+#include "BaseChannel.h"
+class VideoChannel :public BaseChannel{
 
 public:
-    VideoChannel();
+    VideoChannel(int stream_index,AVCodecContext *avCodecContext);
+    ~VideoChannel();
 
     void start();
 };

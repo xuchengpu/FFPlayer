@@ -1,7 +1,6 @@
 //
 // Created by 许成谱 on 2022/10/20.
 //
-
 #ifndef FFPLAYER_SAFE_QUEUE_H
 #define FFPLAYER_SAFE_QUEUE_H
 
@@ -15,10 +14,10 @@ using namespace std;
  */
 template<typename T>
 class SafeQueue {
-
 private:
     typedef void (*ReleaseCallback)(T *);
 
+private:
     queue<T> queue;
     pthread_mutex_t mutex;//互斥锁 安全
     pthread_cond_t cond;//等待和唤醒
@@ -30,7 +29,7 @@ public:
         pthread_cond_init(&cond, 0);
     }
 
-    ~SafeQueue() {
+    ~ SafeQueue() {
         pthread_mutex_destroy(&mutex);
         pthread_cond_destroy(&cond);
     }
@@ -111,6 +110,7 @@ public:
         }
         pthread_mutex_unlock(&mutex);
     }
+
     /**
      * 设置回调函数，用于释放资源
      * @param callback
