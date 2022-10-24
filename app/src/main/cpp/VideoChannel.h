@@ -7,12 +7,21 @@
 
 #include "BaseChannel.h"
 class VideoChannel :public BaseChannel{
+private:
+    pthread_t pid_video_decode;
+    pthread_t pid_video_play;
 
 public:
     VideoChannel(int stream_index,AVCodecContext *avCodecContext);
     ~VideoChannel();
 
     void start();
+
+    void stop();
+
+    void video_decode();
+
+    void video_play();
 };
 
 

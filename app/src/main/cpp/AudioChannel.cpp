@@ -15,3 +15,7 @@ AudioChannel::~AudioChannel() {
 void AudioChannel::start() {
 
 }
+
+void AudioChannel::stop() {
+
+}

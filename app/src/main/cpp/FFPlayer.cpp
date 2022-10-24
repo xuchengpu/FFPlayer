@@ -151,5 +151,26 @@ void FFPlayer::start_(){
         //取出压缩包放到压缩包队列里面去 可能是音频的也可能是视频的
         AVPacket * packet=av_packet_alloc();
         int ret=av_read_frame(avFormatContext,packet);
+        if (!ret){
+
+            if (videoChannel&&videoChannel->stream_index==packet->stream_index){
+                //插入视频的压缩包队列
+                videoChannel->packets.insertToQueue(packet);
+            }else if (audioChannel&&audioChannel->stream_index==packet->stream_index){
+                audioChannel->packets.insertToQueue(packet);
+            }
+        }else if (ret==AVERROR_EOF){
+            //读到文件末尾
+            //注意此时是读完了，并不一定是播完了
+
+        }else{
+            //av_read_frame出现错误，跳出循环
+            break;
+        }
     }
+
+    isplaying=0;
+    videoChannel->stop();
+    audioChannel->stop();
+
 }

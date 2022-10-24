@@ -9,16 +9,17 @@
 
 extern "C"{
 #include <libavcodec/avcodec.h>
+#include "libswscale/swscale.h"
+#include <libavutil/imgutils.h>
 };
 
 class BaseChannel{
-private:
+public:
     int stream_index;//音频或者视频的下标
     SafeQueue<AVPacket *> packets;//压缩的数据包
     SafeQueue<AVFrame *> frames;//原始的数据包
     AVCodecContext *avCodecContext=0;//音频、视频解码器上下文
     bool isPlaying;//是否播放
-public:
     BaseChannel(int stream_index,AVCodecContext *avCodecContext)
     :stream_index(stream_index),avCodecContext(avCodecContext)
     {

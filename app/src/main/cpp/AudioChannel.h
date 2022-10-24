@@ -13,6 +13,8 @@ public:
     ~AudioChannel();
 
     void start();
+
+    void stop();
 };
 
 
