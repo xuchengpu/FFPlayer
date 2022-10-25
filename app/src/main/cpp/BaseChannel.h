@@ -6,55 +6,59 @@
 #define FFPLAYER_BASECHANNEL_H
 
 #include "safe_queue.h"
+#include "logging.h"
 
-extern "C"{
+
+extern "C" {
 #include <libavcodec/avcodec.h>
-#include "libswscale/swscale.h"
+#include <libswscale/swscale.h>
 #include <libavutil/imgutils.h>
-};
+}
 
-class BaseChannel{
+#define TAG "ffplayer-lib"
+
+class BaseChannel {
 public:
     int stream_index;//音频或者视频的下标
     SafeQueue<AVPacket *> packets;//压缩的数据包
     SafeQueue<AVFrame *> frames;//原始的数据包
-    AVCodecContext *avCodecContext=0;//音频、视频解码器上下文
+    AVCodecContext *avCodecContext = 0;//音频、视频解码器上下文
     bool isPlaying;//是否播放
-    BaseChannel(int stream_index,AVCodecContext *avCodecContext)
-    :stream_index(stream_index),avCodecContext(avCodecContext)
-    {
+    BaseChannel(int stream_index, AVCodecContext *avCodecContext)
+            : stream_index(stream_index), avCodecContext(avCodecContext) {
         packets.setReleaseCallback(releaseAVPacket);
         frames.setReleaseCallback(releaseAVFrame);
 
     }
+
     //父类析构一定要加virtual
-    virtual ~BaseChannel(){
+    virtual ~BaseChannel() {
         packets.clear();
         frames.clear();
     }
+
     /**
      * 释放队列中的所有 AVPacket*
      * @param pPacket
      */
-    static void releaseAVPacket(AVPacket **pPacket){
-        if (pPacket){
+    static void releaseAVPacket(AVPacket **pPacket) {
+        if (pPacket) {
             av_packet_free(pPacket);
-            *pPacket=0;
+            *pPacket = 0;
         }
     }
+
     /**
      * 释放队列中的所有 AVFrame*
      * @param pPacket
      */
-    static void releaseAVFrame(AVFrame **pFrame){
-        if (pFrame){
+    static void releaseAVFrame(AVFrame **pFrame) {
+        if (pFrame) {
             av_frame_free(pFrame);
-            *pFrame=0;
+            *pFrame = 0;
         }
     }
 };
-
-
 
 
 #endif //FFPLAYER_BASECHANNEL_H

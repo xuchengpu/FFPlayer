@@ -9,6 +9,9 @@ import static com.xcp.ffplayer.Constants.FFMPEG_NOMEDIA;
 import static com.xcp.ffplayer.Constants.FFMPEG_OPEN_DECODER_FAIL;
 
 import android.text.TextUtils;
+import android.view.Surface;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
 
 /**
  * Created by 许成谱 on 2022/4/15 12:17.
@@ -16,10 +19,12 @@ import android.text.TextUtils;
  * 热爱生活每一天！
  * 视频播放器
  */
-public class FFPlayer {
+//3.3实现surfaceview回调方法
+public class FFPlayer implements SurfaceHolder.Callback {
 
     private String dataSource;
     private PrepareListener preparedListener;
+    private SurfaceHolder surfaceHolder;
 
     public FFPlayer() {
     }
@@ -93,6 +98,31 @@ public class FFPlayer {
         }
     }
 
+    public void setSurfaceView(SurfaceView surfaceView) {
+        //3.2移除原有回调，添加新的回调
+        if(surfaceHolder!=null) {
+            surfaceHolder.removeCallback(this);
+        }
+        surfaceHolder=surfaceView.getHolder();
+        surfaceHolder.addCallback(this);
+    }
+
+    @Override
+    public void surfaceCreated(SurfaceHolder holder) {
+
+    }
+
+    @Override
+    public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+        //3.4当屏幕surfaceview发生变化时就回调到这里
+        nativeSetSurface(holder.getSurface());
+    }
+
+    @Override
+    public void surfaceDestroyed(SurfaceHolder holder) {
+
+    }
+
     private native void nativePrepare(String dataSource);
 
     private native void nativeStart();
@@ -100,5 +130,8 @@ public class FFPlayer {
     private native void nativeStop();
 
     private native void nativeRelease();
+
+    private native void nativeSetSurface(Surface surface);
+
 
 }

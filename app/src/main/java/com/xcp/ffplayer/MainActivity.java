@@ -1,6 +1,7 @@
 package com.xcp.ffplayer;
 
 import android.os.Bundle;
+import android.view.SurfaceView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -11,13 +12,18 @@ public class MainActivity extends AppCompatActivity {
         System.loadLibrary("native-lib");
     }
     private FFPlayer ffPlayer;
+    private SurfaceView surfaceView;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        surfaceView=findViewById(R.id.surfaceView);
+
         ffPlayer=new FFPlayer();
-        ffPlayer.setDataSource("/storage/emulated/0/Android/data/com.xcp.ffplayer/cache/22.mp4");
+        //3.1 设置surfaceview到c++层
+        ffPlayer.setSurfaceView(surfaceView);
+        ffPlayer.setDataSource("/storage/emulated/0/Android/data/22.mp4");
         ffPlayer.setPreparedListener(new PrepareListener() {
             @Override
             public void onPrepared() {

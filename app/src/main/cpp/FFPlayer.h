@@ -15,7 +15,7 @@
 #include "JNICallbakcHelper.h"
 #include "util.h"
 #include "logging.h"
-#define TAG "tag"
+
 extern "C" {
 #include "libavformat/avformat.h"
 #include "libavutil/avutil.h"
@@ -30,6 +30,7 @@ private:
     VideoChannel *videoChannel=0;
     JNICallbakcHelper *helper=0;
     int isplaying=0;
+    RenderCallback renderCallback;
 public:
     FFPlayer(const char *data_source, JNICallbakcHelper *pHelper);
     ~FFPlayer();
@@ -37,7 +38,7 @@ public:
     void prepare_();
     void start();
     void start_();
-
+    void setRenderCallback(RenderCallback callback);
 };
 
 

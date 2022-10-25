@@ -110,6 +110,7 @@ void FFPlayer::prepare_() {
             audioChannel= new AudioChannel(i,avCodecContext);
         }else if (codecpar->codec_type==AVMEDIA_TYPE_VIDEO){
             videoChannel=new VideoChannel(i,avCodecContext);
+            videoChannel->setRenderCallback(renderCallback);
         }
     }//循环结束
     //第十一步: 如果流中 没有音频 也没有 视频 【健壮性校验】
@@ -143,7 +144,7 @@ void FFPlayer::start(){
         audioChannel->start();
     }
     //开启子线程，执行真正的开始任务，把音频和视频的压缩包加入到队列里面去
-    pthread_create(&pid_start,NULL,start_task,this);
+    pthread_create(&pid_start,0,start_task,this);
 }
 
 void FFPlayer::start_(){
@@ -152,7 +153,7 @@ void FFPlayer::start_(){
         AVPacket * packet=av_packet_alloc();
         int ret=av_read_frame(avFormatContext,packet);
         if (!ret){
-
+//            LOGD(TAG, "FFPlayer::start_() av_read_frame ret=%d ",ret);
             if (videoChannel&&videoChannel->stream_index==packet->stream_index){
                 //插入视频的压缩包队列
                 videoChannel->packets.insertToQueue(packet);
@@ -162,15 +163,21 @@ void FFPlayer::start_(){
         }else if (ret==AVERROR_EOF){
             //读到文件末尾
             //注意此时是读完了，并不一定是播完了
-
+            LOGD(TAG, "FFPlayer::start_() av_read_frame AVERROR_EOF ");
+            break;
         }else{
             //av_read_frame出现错误，跳出循环
+            LOGD(TAG, "FFPlayer::start_() av_read_frame error ");
             break;
         }
     }
-
+    LOGD(TAG, "FFPlayer::start_() av_read_frame 错误跳出循环 ");
     isplaying=0;
     videoChannel->stop();
     audioChannel->stop();
 
+}
+
+void FFPlayer::setRenderCallback(RenderCallback callback){
+    renderCallback=callback;
 }

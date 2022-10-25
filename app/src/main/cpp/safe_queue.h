@@ -6,6 +6,8 @@
 
 #include <queue>
 #include <pthread.h>
+#include "logging.h"
+#define TAG "ffplayer-lib"
 
 using namespace std;
 
@@ -59,7 +61,6 @@ public:
      * AVPacket* 压缩包、 AVFrame *原始包
      */
     int getQueueAndDel(T &value) {
-
         pthread_mutex_lock(&mutex);//多线程操作加锁
         while (work && queue.empty()) {
             pthread_cond_wait(&cond, &mutex);//没有数据就阻塞在这里，直到根据条件变量被唤醒
@@ -67,6 +68,8 @@ public:
         if (!queue.empty()) {
             value = queue.front();
             queue.pop();//从队列中移除出去
+            LOGD(TAG, "getQueueAndDel ");
+            pthread_mutex_unlock(&mutex);
             return 1;//1表示true;
         }
         pthread_mutex_unlock(&mutex);

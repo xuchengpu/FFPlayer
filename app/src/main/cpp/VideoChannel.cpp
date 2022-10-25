@@ -67,14 +67,17 @@ void VideoChannel::video_decode() {
         ret = avcodec_receive_frame(avCodecContext, avFrame);
         if (ret == AVERROR(EAGAIN)) {
             //output is not available in this state - user must try to send new input
+            LOGD(TAG, "video_decode ret == AVERROR(EAGAIN);");
             continue;
         } else if (ret != 0) {
             //出现错误，跳出循环
+            LOGD(TAG, "video_decode else if (ret != 0);");
             break;
         }
         //finally we get avFrame
         frames.insertToQueue(avFrame);
     }
+    LOGD(TAG, "video_decode  releaseAVPacket(&avPacket);");
     releaseAVPacket(&avPacket);
 }
 
@@ -122,6 +125,7 @@ void VideoChannel::video_play() {
         }
         //生产者生产的速度不够，等一等
         if (!ret) {
+            LOGD(TAG, "video_play begin continue ");
             continue;
         }
         /**
@@ -142,6 +146,20 @@ void VideoChannel::video_play() {
         );
         // ANatvieWindows 渲染工作
         // SurfaceView ----- ANatvieWindows
+        // 如何渲染一帧图像？
+        // 答：宽，高，数据  ----> 函数指针的声明
+        //3.9 我拿不到Surface，只能回调给 native-lib.cpp
+        if (renderCallback){
+            renderCallback(pointers[0],avCodecContext->width,avCodecContext->height,linesizes[0]);
+        }
+        releaseAVFrame(&avFrame);//已渲染完，数据包释放
     }
-    releaseAVFrame(&avFrame);
+    releaseAVFrame(&avFrame);//出现错误退出的循环都要释放内存
+    isPlaying= false;
+    av_free(&pointers[0]);
+    sws_freeContext(swsContext);
+}
+
+void VideoChannel::setRenderCallback(RenderCallback callback){
+    renderCallback=callback;
 }
