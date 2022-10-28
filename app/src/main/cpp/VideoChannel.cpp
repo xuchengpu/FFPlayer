@@ -82,6 +82,7 @@ void VideoChannel::video_decode() {
 }
 
 void VideoChannel::video_play() {
+
     uint8_t *pointers[4];// RGBA
     int linesizes[4];// RGBA
     /**
