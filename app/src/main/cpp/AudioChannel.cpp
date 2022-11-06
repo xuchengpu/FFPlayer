@@ -4,7 +4,7 @@
 
 #include "AudioChannel.h"
 
-AudioChannel::AudioChannel(int stream_index,AVCodecContext *avCodecContext): BaseChannel(stream_index,avCodecContext) {
+AudioChannel::AudioChannel(int stream_index,AVCodecContext *avCodecContext,AVRational timeBase): BaseChannel(stream_index,avCodecContext,timeBase) {
     // 音频三要素
     /*
      * 1.采样率 44100 48000
@@ -213,6 +213,10 @@ int AudioChannel::getPCM() {
         pcm_data_size = samples_per_channel * out_sample_size * out_channels; // 941通道样本数  *  2样本格式字节数  *  2声道数  =3764
 
         // 单通道样本数:1024  * 2声道  * 2(16bit)  =  4,096
+
+        //6.3 设置每一帧的时间戳  // audio_time == 0.00000 0.0231233 0.035454 就是音频播放的时间搓
+        //ffmpeg 采用了无理数的概念，用多少多少分之一的形式避免精度损失
+        audioStamp=frame->best_effort_timestamp*av_q2d(timeBase);
 
         break; // 利用while循环 来写我们的逻辑
     } // while end

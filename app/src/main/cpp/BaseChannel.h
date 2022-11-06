@@ -25,8 +25,11 @@ public:
     SafeQueue<AVFrame *> frames;//原始的数据包
     AVCodecContext *avCodecContext = 0;//音频、视频解码器上下文
     bool isPlaying;//是否播放
-    BaseChannel(int stream_index, AVCodecContext *avCodecContext)
-            : stream_index(stream_index), avCodecContext(avCodecContext) {
+    //6.1 播放流的时间基准,音视频流都有，音频流和视频流同步用
+    AVRational timeBase;
+
+    BaseChannel(int stream_index, AVCodecContext *avCodecContext,AVRational timeBase)
+            : stream_index(stream_index), avCodecContext(avCodecContext), timeBase(timeBase) {
         packets.setReleaseCallback(releaseAVPacket);
         frames.setReleaseCallback(releaseAVFrame);
 

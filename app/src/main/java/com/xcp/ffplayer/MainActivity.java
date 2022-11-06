@@ -23,7 +23,10 @@ public class MainActivity extends AppCompatActivity {
         ffPlayer=new FFPlayer();
         //3.1 设置surfaceview到c++层
         ffPlayer.setSurfaceView(surfaceView);
-        ffPlayer.setDataSource("/storage/emulated/0/Android/data/demo.mp4");
+//        ffPlayer.setDataSource("/storage/emulated/0/Android/data/demo.mp4");
+//        ffPlayer.setDataSource("/storage/emulated/0/Android/data/22.mp4");
+//        ffPlayer.setDataSource("http://devimages.apple.com.edgekey.net/streaming/examples/bipbop_4x3/gear2/prog_index.m3u8");
+        ffPlayer.setDataSource("http://vfx.mtime.cn/Video/2019/02/04/mp4/190204084208765161.mp4");
         ffPlayer.setPreparedListener(new PrepareListener() {
             @Override
             public void onPrepared() {

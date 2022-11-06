@@ -37,8 +37,11 @@ public:
     // 播放器队列接口
     SLAndroidSimpleBufferQueueItf bqPlayerBufferQueue = 0;
 
+    //6.3 记录当前音频帧的时间戳
+    double audioStamp;
+
 public:
-    AudioChannel(int stream_index,AVCodecContext *avCodecContext );
+    AudioChannel(int stream_index,AVCodecContext *avCodecContext ,AVRational timeBase);
     ~AudioChannel();
 
     void start();

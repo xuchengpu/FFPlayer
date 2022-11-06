@@ -105,11 +105,25 @@ void FFPlayer::prepare_() {
             }
             return;
         }
+        //6.1 给timebase赋值
+        AVRational timeBase= pAvStream->time_base;
+
         //第十步：从解码器参数中获取流的类型 视频、音频
         if (codecpar->codec_type==AVMEDIA_TYPE_AUDIO){
-            audioChannel= new AudioChannel(i,avCodecContext);
+            audioChannel= new AudioChannel(i,avCodecContext,timeBase);
         }else if (codecpar->codec_type==AVMEDIA_TYPE_VIDEO){
-            videoChannel=new VideoChannel(i,avCodecContext);
+
+            //6.7适配部分视频中包含封面流 封面流不能当成视频流处理，拦截
+            // 虽然是视频类型，但是只有一帧封面
+            if (pAvStream->disposition & AV_DISPOSITION_ATTACHED_PIC) {
+                continue;
+            }
+
+            //6.2 给fps赋值
+            AVRational avRational=pAvStream->avg_frame_rate;
+            int fps=av_q2d(avRational);
+
+            videoChannel=new VideoChannel(i,avCodecContext,timeBase,fps);
             videoChannel->setRenderCallback(renderCallback);
         }
     }//循环结束
@@ -138,6 +152,7 @@ void FFPlayer::start(){
     isplaying=1;
     if (videoChannel){
         videoChannel->start();
+        videoChannel->setAudioChannel(audioChannel);
     }
 
     if (audioChannel){

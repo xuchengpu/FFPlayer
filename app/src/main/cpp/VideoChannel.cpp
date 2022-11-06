@@ -3,10 +3,42 @@
 //
 
 #include "VideoChannel.h"
+//6.5 定义丢包函数
+/**
+ * 丢压缩包
+ * @param queue
+ */
+void dropAVPacket(queue<AVPacket *> &queue) {
+    while (!queue.empty()){
+        //丢弃压缩包的时候要考虑是否为I帧（关键帧）,如果丢失的是关键帧会调至P、b帧没有参考对象导致花屏
+        AVPacket * avpkt=queue.front();
+        if (avpkt->flags != AV_PKT_FLAG_KEY) {
+            BaseChannel::releaseAVPacket(&avpkt);
+            queue.pop();
+        } else{
+            //跳出循环，使得只会一批只丢一个关键帧相关的帧
+            break;
+        }
+    }
+}
+/**
+ * 丢原始包
+ * @param queue
+ */
+void dropAVFrame(queue<AVFrame *> &queue) {
+    //已经从压缩包解压过了，不用考虑关键帧了，直接释放
+    if (!queue.empty()){
+        AVFrame * frame=queue.front();
+        BaseChannel::releaseAVFrame(&frame);
+        queue.pop();
+    }
+}
 
-VideoChannel::VideoChannel(int stream_index, AVCodecContext *avCodecContext) : BaseChannel(
-        stream_index, avCodecContext) {
-
+VideoChannel::VideoChannel(int stream_index, AVCodecContext *avCodecContext, AVRational timeBase,
+                           int fps) : BaseChannel(
+        stream_index, avCodecContext, timeBase), fps(fps) {
+    packets.setDropDataCallback(dropAVPacket);
+    frames.setDropDataCallback(dropAVFrame);
 }
 
 VideoChannel::~VideoChannel() {
@@ -15,7 +47,7 @@ VideoChannel::~VideoChannel() {
 
 void *task_video_decode(void *args) {
     auto *videochannel = static_cast<VideoChannel *>(args);
-    if (videochannel){
+    if (videochannel) {
         videochannel->video_decode();
     }
     return nullptr;
@@ -23,7 +55,7 @@ void *task_video_decode(void *args) {
 
 void *task_video_play(void *args) {
     auto *videochannel = static_cast<VideoChannel *>(args);
-    if (videochannel){
+    if (videochannel) {
         videochannel->video_play();
     }
     return nullptr;
@@ -49,8 +81,8 @@ void VideoChannel::video_decode() {
     AVPacket *avPacket = nullptr;
     while (isPlaying) {
         //5.2
-        if (isPlaying&&frames.size()>100){
-            av_usleep(10*1000);
+        if (isPlaying && frames.size() > 100) {
+            av_usleep(10 * 1000);
             continue;
         }
 
@@ -81,7 +113,7 @@ void VideoChannel::video_decode() {
         } else if (ret != 0) {
             //出现错误，跳出循环
             //5.5
-            if (avFrame){
+            if (avFrame) {
                 releaseAVFrame(&avFrame);
             }
             LOGD(TAG, "video_decode else if (ret != 0);");
@@ -164,13 +196,51 @@ void VideoChannel::video_play() {
                   pointers,
                   linesizes
         );
+
+        //6.6必须在渲染之前 进行时间的判断来音视频同步 人类对音频敏感，以音频时间为基准
+        //音频快  视频丢包来追上音频
+        //音频慢 视频休眠来等下音频
+
+        //视频编码之前packet包之间可能插入延迟间隔,可能没有
+        double extraDelay= avFrame->repeat_pict/(2*fps);
+        double fpsDelay=1.0/fps;//fps间隔  fps:每秒多少帧
+        double realDelay=extraDelay+fpsDelay;
+
+        double videoStamp=avFrame->best_effort_timestamp* av_q2d(timeBase);
+        double audioStamp=audioChannel->audioStamp;
+        double timeDiff=videoStamp-audioStamp;//单位秒
+        LOGD(TAG, "音视频流timeDiff = %lf",timeDiff);
+        if (timeDiff>0){
+            //视频快了  等一等
+            if (timeDiff>1){
+                //时间相差过大，说明可能是拖动进度条等，不能睡眠太长时间，否则一直卡着不动会被当成bug
+                av_usleep(realDelay*1000*1000);//单位转换成微秒 稍微睡会
+            }else{
+                av_usleep((realDelay+timeDiff)*1000*1000);//单位转换成微秒 精确的睡，把时间差拉回来
+            }
+        }else if (timeDiff<0){
+            //视频慢于音频 赶紧通过丢包的形式追赶上音频
+            //经验值 0.05
+            if (fabs(timeDiff)<0.05){// fabs对负数的操作（对浮点数取绝对值）
+                frames.dropData();// 多线程（安全 同步丢包）
+                continue;// 丢完取下一个包
+            }
+
+        }else{
+            //音视频流完全同步
+            LOGD(TAG, "音视频流完全同步");
+        }
+
+
+
         // ANatvieWindows 渲染工作
         // SurfaceView ----- ANatvieWindows
         // 如何渲染一帧图像？
         // 答：宽，高，数据  ----> 函数指针的声明
         //3.9 我拿不到Surface，只能回调给 native-lib.cpp
-        if (renderCallback){
-            renderCallback(pointers[0],avCodecContext->width,avCodecContext->height,linesizes[0]);
+        if (renderCallback) {
+            renderCallback(pointers[0], avCodecContext->width, avCodecContext->height,
+                           linesizes[0]);
         }
 
         av_frame_unref(avFrame);
@@ -179,11 +249,15 @@ void VideoChannel::video_play() {
     //5.6
     av_frame_unref(avFrame);
     releaseAVFrame(&avFrame);//出现错误退出的循环都要释放内存
-    isPlaying= false;
+    isPlaying = false;
     av_free(&pointers[0]);
     sws_freeContext(swsContext);
 }
 
-void VideoChannel::setRenderCallback(RenderCallback callback){
-    renderCallback=callback;
+void VideoChannel::setRenderCallback(RenderCallback callback) {
+    renderCallback = callback;
+}
+
+void VideoChannel::setAudioChannel(AudioChannel *audioChannel) {
+    this->audioChannel = audioChannel;
 }

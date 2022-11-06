@@ -7,6 +7,7 @@
 #include <queue>
 #include <pthread.h>
 #include "logging.h"
+
 #define TAG "ffplayer-lib"
 
 using namespace std;
@@ -19,12 +20,16 @@ class SafeQueue {
 private:
     typedef void (*ReleaseCallback)(T *);
 
+    //6.4 设置丢包的函数，同样以回调的形式交由外界去释放
+    typedef void (*DropDataCallback)(queue<T> &);
+
 private:
     queue<T> queue;
     pthread_mutex_t mutex;//互斥锁 安全
     pthread_cond_t cond;//等待和唤醒
     int work;//标记队列是否工作
     ReleaseCallback releaseCallback;
+    DropDataCallback dropDataCallback;
 public:
     SafeQueue() {
         pthread_mutex_init(&mutex, 0);
@@ -121,6 +126,17 @@ public:
      */
     void setReleaseCallback(ReleaseCallback callback) {
         this->releaseCallback = callback;
+    }
+
+    void setDropDataCallback(DropDataCallback callback) {
+        this->dropDataCallback = callback;
+    }
+
+    void dropData() {
+        //操作的变量涉及到多线程，必须使用锁
+        pthread_mutex_lock(&mutex);
+        dropDataCallback(queue); // 函数指针 具体丢包动作，让外界完成
+        pthread_mutex_unlock(&mutex);
     }
 };
 
