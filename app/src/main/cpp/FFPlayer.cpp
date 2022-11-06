@@ -14,12 +14,12 @@ FFPlayer::FFPlayer(const char *data_source, JNICallbakcHelper *pHelper) {
 void *prepareTask(void *args) {
     auto *ffPlayer = static_cast<FFPlayer *>(args);
     ffPlayer->prepare_();
-    return 0;
+    return nullptr;
 }
 
 void FFPlayer::prepare() {
     //子线程中执行
-    pthread_create(&pid_prepare, 0, prepareTask, this);
+    pthread_create(&pid_prepare, nullptr, prepareTask, this);
 }
 
 FFPlayer::~FFPlayer() {
@@ -33,7 +33,7 @@ void FFPlayer::prepare_() {
     //int avformat_open_input(AVFormatContext **ps, const char *url, ff_const59 AVInputFormat *fmt, AVDictionary **options);
     avFormatContext = avformat_alloc_context();
 
-    AVDictionary *avDictionary = 0;
+    AVDictionary *avDictionary = nullptr;
     av_dict_set(&avDictionary, "timeout", "5000000", 0);
     /*
      * 1，AVFormatContext *
@@ -41,7 +41,7 @@ void FFPlayer::prepare_() {
      * 3，AVInputFormat *fmt  Mac、Windows 摄像头、麦克风， 我们目前安卓用不到
      * 4，各种设置：例如：Http 连接超时， 打开rtmp的超时  AVDictionary **options
      */
-    int r = avformat_open_input(&avFormatContext, data_source, 0, &avDictionary);
+    int r = avformat_open_input(&avFormatContext, data_source, nullptr, &avDictionary);
     // 释放字典
     av_dict_free(&avDictionary);
     if (r != 0) {
@@ -53,7 +53,7 @@ void FFPlayer::prepare_() {
         return;
     }
     //第二步：查找媒体中的音视频流的信息
-    r = avformat_find_stream_info(avFormatContext, 0);
+    r = avformat_find_stream_info(avFormatContext, nullptr);
     if (r < 0) {
         //解析失败
         LOGD(TAG, "avformat_find_stream_info faile");
@@ -96,7 +96,7 @@ void FFPlayer::prepare_() {
             return;
         }
         //第九步：打开解码器
-       r= avcodec_open2(avCodecContext,avCodec,0);
+       r= avcodec_open2(avCodecContext,avCodec,nullptr);
         if (r){
             //把错误信息反馈给Java
             LOGD(TAG, "avcodec_open2 faile");
@@ -131,7 +131,7 @@ void FFPlayer::prepare_() {
 void* start_task(void* args){
     auto * ffPlayer=static_cast<FFPlayer*> (args);
     ffPlayer->start_();
-    return 0;
+    return nullptr;
 }
 
 void FFPlayer::start(){
@@ -144,11 +144,20 @@ void FFPlayer::start(){
         audioChannel->start();
     }
     //开启子线程，执行真正的开始任务，把音频和视频的压缩包加入到队列里面去
-    pthread_create(&pid_start,0,start_task,this);
+    pthread_create(&pid_start,nullptr,start_task,this);
 }
 
 void FFPlayer::start_(){
     while (isplaying){
+        //5.1 限制放入队列的数量，一次性加载完内存会飙升甚至oom
+        if (videoChannel&&videoChannel->packets.size()>100){
+            av_usleep(10*1000);//单位：微秒  休眠10ms
+            continue;
+        }
+        if (audioChannel&&audioChannel->packets.size()>100){
+            av_usleep(10*1000);//单位：微秒  休眠10ms
+            continue;
+        }
         //取出压缩包放到压缩包队列里面去 可能是音频的也可能是视频的
         AVPacket * packet=av_packet_alloc();
         int ret=av_read_frame(avFormatContext,packet);
@@ -163,8 +172,12 @@ void FFPlayer::start_(){
         }else if (ret==AVERROR_EOF){
             //读到文件末尾
             //注意此时是读完了，并不一定是播完了
-            LOGD(TAG, "FFPlayer::start_() av_read_frame AVERROR_EOF ");
-            break;
+
+            //5.5
+            if ((videoChannel&&videoChannel->packets.empty())&&((audioChannel&&audioChannel->packets.empty()))){
+                LOGD(TAG, "FFPlayer::start_() av_read_frame AVERROR_EOF ");
+                break;// 队列的数据被音频 视频 全部播放完毕了，我在退出
+            }
         }else{
             //av_read_frame出现错误，跳出循环
             LOGD(TAG, "FFPlayer::start_() av_read_frame error ");

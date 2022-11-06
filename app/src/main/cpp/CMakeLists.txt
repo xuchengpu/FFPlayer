@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10.2 )
+cmake_minimum_required(VERSION 3.6.4111459)
 
 SET(FFMPEG ${CMAKE_SOURCE_DIR}/ffmpeg)#ffmpeg路径
 SET(RTMP ${CMAKE_SOURCE_DIR}/rtmp)#rtmp路径
@@ -29,4 +29,5 @@ target_link_libraries(
         rtmp # rtmp 后面会专门介绍
         android # android 后面会专门介绍，目前先要明白的是 ANativeWindow 用来渲染画面的
         OpenSLES # OpenSLES 后面会专门介绍，目前先要明白的是 OpenSLES 用来播放声音的
+
 )

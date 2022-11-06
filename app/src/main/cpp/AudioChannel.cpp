@@ -43,7 +43,7 @@ AudioChannel::AudioChannel(int stream_index,AVCodecContext *avCodecContext): Bas
     out_buffers = static_cast<uint8_t *>(malloc(out_buffers_size)); // 堆区开辟而已
 
     // FFmpeg 音频 重采样  音频重采样上下文 第四个
-    swr_ctx  = swr_alloc_set_opts(0,
+    swr_ctx  = swr_alloc_set_opts(nullptr,
                                     // 下面是输出环节
                                   AV_CH_LAYOUT_STEREO,  // 声道布局类型 双声道
                                   AV_SAMPLE_FMT_S16,  // 采样大小 16bit
@@ -53,7 +53,7 @@ AudioChannel::AudioChannel(int stream_index,AVCodecContext *avCodecContext): Bas
                                   avCodecContext->channel_layout, // 声道布局类型
                                   avCodecContext->sample_fmt, // 采样大小
                                   avCodecContext->sample_rate,  // 采样率
-                                  0, 0);
+                                  0, nullptr);
     // 初始化 重采样上下文
     swr_init(swr_ctx);
 }
@@ -65,13 +65,13 @@ AudioChannel::~AudioChannel() {
 void *task_audio_decode(void *args){
     auto audioPlayer=static_cast<AudioChannel*>(args);
     audioPlayer->audio_decode();
-    return 0;
+    return nullptr;
 }
 
 void *task_audio_play(void *args){
     auto audioPlayer=static_cast<AudioChannel*>(args);
     audioPlayer->audio_play();
-    return 0;
+    return nullptr;
 }
 
 void AudioChannel::start() {
@@ -81,9 +81,9 @@ void AudioChannel::start() {
     packets.setWork(1);
     frames.setWork(1);
     //开启子线程，开始从packet中取出数据，将音频压缩包解码为音频原始包(PCM)
-    pthread_create(&pid_audio_decode, 0, task_audio_decode, this);
+    pthread_create(&pid_audio_decode, nullptr, task_audio_decode, this);
     //开启子线程，开始从frames中取出数据，播放
-    pthread_create(&pid_audio_play, 0, task_audio_play, this);
+    pthread_create(&pid_audio_play, nullptr, task_audio_play, this);
 }
 
 void AudioChannel::stop() {
@@ -91,8 +91,15 @@ void AudioChannel::stop() {
 }
 
 void AudioChannel::audio_decode() {
-    AVPacket *avPacket = 0;
+    AVPacket *avPacket = nullptr;
     while (isPlaying) {
+        //5.3
+        if (isPlaying&&frames.size()>100){
+            av_usleep(10*1000);
+            continue;
+        }
+
+
         //阻塞式函数，生产者塞入数据后就会被唤醒，告知可以消费了
         int ret = packets.getQueueAndDel(avPacket);
         //关闭播放跳出循环
@@ -105,8 +112,7 @@ void AudioChannel::audio_decode() {
         }
         //新版ffmpeg 解压缩数据分为两步1、发送packet 2、接收frame
         ret = avcodec_send_packet(avCodecContext, avPacket);
-        //ffmpeg会在内部拷贝一份，自己的这个可以释放掉内存
-        releaseAVPacket(&avPacket);
+
         if (ret) {
             //出现了错误
             break;
@@ -121,13 +127,23 @@ void AudioChannel::audio_decode() {
             continue;
         } else if (ret != 0) {
             //出现错误，跳出循环
+            //5.5
+            if (avFrame){
+                releaseAVFrame(&avFrame);
+            }
             LOGD(TAG,TAG, "audio_decode else if (ret != 0);");
             break;
         }
         //finally we get avFrame PCM数据
         frames.insertToQueue(avFrame);
+
+        //5.4 移除avpacket内部成员变量的堆空间
+        av_packet_unref(avPacket);
+        //ffmpeg会在内部拷贝一份，自己的这个可以释放掉内存
+        releaseAVPacket(&avPacket);
     }
     LOGD(TAG,TAG, "audio_decode  releaseAVPacket(&avPacket);");
+    av_packet_unref(avPacket);
     releaseAVPacket(&avPacket);
 }
 
@@ -160,7 +176,7 @@ int AudioChannel::getPCM() {
     // 获取PCM数据
     // PCM数据在哪里？答：队列 frames队列中  frame->data == PCM数据(待 重采样   32bit)
 
-    AVFrame *frame = 0;
+    AVFrame *frame = nullptr;
     while (isPlaying) {
         int ret = frames.getQueueAndDel(frame);
         if (!isPlaying) {
@@ -199,7 +215,6 @@ int AudioChannel::getPCM() {
         // 单通道样本数:1024  * 2声道  * 2(16bit)  =  4,096
 
         break; // 利用while循环 来写我们的逻辑
-
     } // while end
 
     // FFmpeg录制 Mac 麦克风  输出 每一个音频包的size == 4096
@@ -212,6 +227,9 @@ int AudioChannel::getPCM() {
 
     // 双声道的样本数？  答： （采样率 * 声道数 * 位声） * 2
 
+    //5.6
+    av_frame_unref(frame); // 减1 = 0 释放成员指向的堆区
+    releaseAVFrame(&frame); // 释放AVFrame * 本身的堆区空间
     return pcm_data_size;
 }
 
@@ -232,7 +250,7 @@ void AudioChannel::audio_play() {
      */
 
     // 1.1 创建引擎对象：SLObjectItf engineObject
-    result = slCreateEngine(&engineObject, 0, 0, 0, 0, 0);
+    result = slCreateEngine(&engineObject, 0, nullptr, 0, nullptr, nullptr);
     if (SL_RESULT_SUCCESS != result) {
         LOGE(TAG,"创建引擎 slCreateEngine error");
         return;
@@ -264,7 +282,7 @@ void AudioChannel::audio_play() {
      * TODO 2.设置混音器
      */
     // 2.1 创建混音器
-    result = (*engineInterface)->CreateOutputMix(engineInterface, &outputMixObject, 0, 0, 0); // 环境特效，混响特效，.. 都不需要
+    result = (*engineInterface)->CreateOutputMix(engineInterface, &outputMixObject, 0, nullptr, nullptr); // 环境特效，混响特效，.. 都不需要
     if (SL_RESULT_SUCCESS != result) {
         LOGD(TAG,"初始化混音器 CreateOutputMix failed");
         return;
@@ -325,7 +343,7 @@ void AudioChannel::audio_play() {
     // 3.2 配置音轨（输出）
     // 设置混音器
     SLDataLocator_OutputMix loc_outmix = {SL_DATALOCATOR_OUTPUTMIX, outputMixObject}; // SL_DATALOCATOR_OUTPUTMIX:输出混音器类型
-    SLDataSink audioSnk = {&loc_outmix, NULL}; // outmix最终混音器的成果，给后面代码使用
+    SLDataSink audioSnk = {&loc_outmix, nullptr}; // outmix最终混音器的成果，给后面代码使用
     // 需要的接口 操作队列的接口
     const SLInterfaceID ids[1] = {SL_IID_BUFFERQUEUE};
     const SLboolean req[1] = {SL_BOOLEAN_TRUE};

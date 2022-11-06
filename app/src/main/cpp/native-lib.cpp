@@ -7,10 +7,10 @@
 //
 // Created by 许成谱 on 2022/4/15.
 //
-FFPlayer *mPlayer = 0;
-JavaVM *vm = 0;
+FFPlayer *mPlayer = nullptr;
+JavaVM *vm = nullptr;
 //3.5 定义显示视频所需的window 以静态方式初始化锁变量
-ANativeWindow *window = 0;
+ANativeWindow *window = nullptr;
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 
@@ -26,6 +26,7 @@ void renderCallback(uint8_t *src_data, int width, int height, int src_lineSize) 
     pthread_mutex_lock(&mutex);
     if (!window) {
         pthread_mutex_unlock(&mutex); // 出现了问题后，必须考虑到，释放锁，怕出现死锁问题
+        return;
     }
 
     //把宽高信息设置到window中去
@@ -46,7 +47,7 @@ void renderCallback(uint8_t *src_data, int width, int height, int src_lineSize) 
     }
 
     uint8_t *dst = static_cast<uint8_t *> (window_buffer.bits);
-    int dst_linesize=window_buffer.stride*4;
+    int dst_linesize = window_buffer.stride * 4;
     for (int i = 0; i < window_buffer.height; ++i) { // 图：一行一行显示 [高度不用管，用循环了，遍历高度]
         // 视频分辨率：426 * 240
         // 视频分辨率：宽 426
@@ -69,7 +70,7 @@ void renderCallback(uint8_t *src_data, int width, int height, int src_lineSize) 
 
         // FFmpeg为什么认为  1704 没有问题 ？
         // FFmpeg是默认采用8字节对齐的，他就认为没有问题， 但是ANativeWindow_Buffer他是64字节对齐的，就有问题
-        memcpy(dst+i*dst_linesize,src_data+i*dst_linesize,dst_linesize);
+        memcpy(dst + i * dst_linesize, src_data + i * src_lineSize, dst_linesize);
 //        LOGD(TAG, "memcpy window_buffer.height=%d ",window_buffer.height);
     }
     //数据刷新，显示画面
@@ -83,7 +84,7 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_com_xcp_ffplayer_FFPlayer_nativePrepare(JNIEnv *env, jobject thiz, jstring data_source) {
     JNICallbakcHelper *helper = new JNICallbakcHelper(vm, env, thiz);
-    const char *data_source_ = env->GetStringUTFChars(data_source, 0);
+    const char *data_source_ = env->GetStringUTFChars(data_source, nullptr);
     mPlayer = new FFPlayer(data_source_, helper);
     //3.7 设置播放器解码数据后传递到window的回调，用函数指针来实现
     mPlayer->setRenderCallback(renderCallback);
@@ -120,7 +121,7 @@ Java_com_xcp_ffplayer_FFPlayer_nativeSetSurface(JNIEnv *env, jobject thiz, jobje
     //释放原来的窗口
     if (window) {
         ANativeWindow_release(window);
-        window = 0;
+        window = nullptr;
     }
     //创建新的窗口用来显示视频
     window = ANativeWindow_fromSurface(env, surface);

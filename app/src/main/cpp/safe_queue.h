@@ -46,6 +46,7 @@ public:
             //队列工作中……
             queue.push(value);//插入数据包
             pthread_cond_signal(&cond);//插入数据包后，发出信号，唤醒当前条件下的线程，通知去取
+            LOGD(TAG, "insertToQueue ");
         } else {
             //队列没有工作，回调到外界通知释放资源
             if (releaseCallback) {
@@ -89,7 +90,7 @@ public:
         pthread_mutex_unlock(&mutex);
     }
 
-    int empty() {
+    bool empty() {
         return queue.empty();
     }
 

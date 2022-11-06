@@ -23,7 +23,7 @@ public class MainActivity extends AppCompatActivity {
         ffPlayer=new FFPlayer();
         //3.1 设置surfaceview到c++层
         ffPlayer.setSurfaceView(surfaceView);
-        ffPlayer.setDataSource("/storage/emulated/0/Android/data/22.mp4");
+        ffPlayer.setDataSource("/storage/emulated/0/Android/data/demo.mp4");
         ffPlayer.setPreparedListener(new PrepareListener() {
             @Override
             public void onPrepared() {

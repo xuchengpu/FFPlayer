@@ -15,14 +15,18 @@ VideoChannel::~VideoChannel() {
 
 void *task_video_decode(void *args) {
     auto *videochannel = static_cast<VideoChannel *>(args);
-    videochannel->video_decode();
-    return 0;
+    if (videochannel){
+        videochannel->video_decode();
+    }
+    return nullptr;
 }
 
 void *task_video_play(void *args) {
     auto *videochannel = static_cast<VideoChannel *>(args);
-    videochannel->video_play();
-    return 0;
+    if (videochannel){
+        videochannel->video_play();
+    }
+    return nullptr;
 }
 
 void VideoChannel::start() {
@@ -32,9 +36,9 @@ void VideoChannel::start() {
     packets.setWork(1);
     frames.setWork(1);
     //开启子线程，开始从packet中取出数据，将视频压缩包解码为视频原始包
-    pthread_create(&pid_video_decode, 0, task_video_decode, this);
+    pthread_create(&pid_video_decode, nullptr, task_video_decode, this);
     //开启子线程，开始从frames中取出数据，播放
-    pthread_create(&pid_video_play, 0, task_video_play, this);
+    pthread_create(&pid_video_play, nullptr, task_video_play, this);
 }
 
 void VideoChannel::stop() {
@@ -42,8 +46,14 @@ void VideoChannel::stop() {
 }
 
 void VideoChannel::video_decode() {
-    AVPacket *avPacket = 0;
+    AVPacket *avPacket = nullptr;
     while (isPlaying) {
+        //5.2
+        if (isPlaying&&frames.size()>100){
+            av_usleep(10*1000);
+            continue;
+        }
+
         //阻塞式函数，生产者塞入数据后就会被唤醒，告知可以消费了
         int ret = packets.getQueueAndDel(avPacket);
         //关闭播放跳出循环
@@ -56,8 +66,7 @@ void VideoChannel::video_decode() {
         }
         //新版ffmpeg 解压缩数据分为两步1、发送packet 2、接收frame
         ret = avcodec_send_packet(avCodecContext, avPacket);
-        //ffmpeg会在内部拷贝一份，自己的这个可以释放掉内存
-        releaseAVPacket(&avPacket);
+
         if (ret) {
             //出现了错误
             break;
@@ -71,13 +80,23 @@ void VideoChannel::video_decode() {
             continue;
         } else if (ret != 0) {
             //出现错误，跳出循环
+            //5.5
+            if (avFrame){
+                releaseAVFrame(&avFrame);
+            }
             LOGD(TAG, "video_decode else if (ret != 0);");
             break;
         }
         //finally we get avFrame
         frames.insertToQueue(avFrame);
+
+        //5.4 移除avpacket内部成员变量的堆空间
+        av_packet_unref(avPacket);
+        //ffmpeg会在内部拷贝一份，自己的这个可以释放掉内存
+        releaseAVPacket(&avPacket);
     }
     LOGD(TAG, "video_decode  releaseAVPacket(&avPacket);");
+    av_packet_unref(avPacket);
     releaseAVPacket(&avPacket);
 }
 
@@ -110,13 +129,13 @@ void VideoChannel::video_play() {
             avCodecContext->height,
             AV_PIX_FMT_RGBA,//RGBA
             SWS_BILINEAR,//算法  该算法速度适中，画质较好
-            NULL,
-            NULL,
-            NULL
+            nullptr,
+            nullptr,
+            nullptr
     );
 
     //1、从队列里拿frame原始包
-    AVFrame *avFrame = 0;
+    AVFrame *avFrame = nullptr;
     while (isPlaying) {
         //阻塞式函数，生产者塞入数据后就会被唤醒，告知可以消费了
         int ret = frames.getQueueAndDel(avFrame);
@@ -153,8 +172,12 @@ void VideoChannel::video_play() {
         if (renderCallback){
             renderCallback(pointers[0],avCodecContext->width,avCodecContext->height,linesizes[0]);
         }
+
+        av_frame_unref(avFrame);
         releaseAVFrame(&avFrame);//已渲染完，数据包释放
     }
+    //5.6
+    av_frame_unref(avFrame);
     releaseAVFrame(&avFrame);//出现错误退出的循环都要释放内存
     isPlaying= false;
     av_free(&pointers[0]);
