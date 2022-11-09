@@ -4,6 +4,7 @@
 
 #include <android/native_window_jni.h> // ANativeWindow 用来渲染画面的 == Surface对象
 
+
 //
 // Created by 许成谱 on 2022/4/15.
 //
@@ -140,6 +141,7 @@ Java_com_xcp_ffplayer_FFPlayer_nativeGetDuration(JNIEnv *env, jobject thiz) {
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_xcp_ffplayer_FFPlayer_nativeSetProgress(JNIEnv *env, jobject thiz, jint progress) {
-
-
+    if (mPlayer){
+        mPlayer->seek((int)progress);
+    }
 }

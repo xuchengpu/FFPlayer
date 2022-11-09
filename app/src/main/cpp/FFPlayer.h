@@ -23,16 +23,17 @@ extern "C" {
 }
 class FFPlayer {
 private:
-    char* data_source=0;
+    char* data_source=nullptr;
     pthread_t pid_prepare;
     pthread_t pid_start;
-    AVFormatContext *avFormatContext=0;
-    AudioChannel *audioChannel=0;
-    VideoChannel *videoChannel=0;
-    JNICallbakcHelper *helper=0;
+    AVFormatContext *avFormatContext=nullptr;
+    AudioChannel *audioChannel= nullptr;
+    VideoChannel *videoChannel=nullptr;
+    JNICallbakcHelper *helper=nullptr;
     int isplaying=0;
     RenderCallback renderCallback;
     int duration;
+    pthread_mutex_t seekMutex;
 public:
     FFPlayer(const char *data_source, JNICallbakcHelper *pHelper);
     ~FFPlayer();
@@ -43,6 +44,8 @@ public:
     void setRenderCallback(RenderCallback callback);
 
     int getDuration();
+
+    void seek(int progress);
 };
 
 

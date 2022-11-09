@@ -4,6 +4,9 @@
 #define THREAD_MAIN 1 // 主线程
 #define THREAD_CHILD 2 // 子线程
 
+//定义宏函数，用户删除对象
+#define DELETE(obj) if(obj){ delete obj; obj=nullptr;}
+
 //错误代码
 //打不开视频
 #define FFMPEG_CAN_NOT_OPEN_URL 1

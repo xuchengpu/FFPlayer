@@ -134,6 +134,6 @@ public class MainActivity extends AppCompatActivity implements SeekBar.OnSeekBar
     public void onStopTrackingTouch(SeekBar seekBar) {
         isOnTouch = false;
         int progress = seekBar.getProgress();
-        ffPlayer.setProgress(progress);
+        ffPlayer.setProgress(progress*duration/100);
     }
 }

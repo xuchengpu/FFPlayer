@@ -4,11 +4,12 @@
 
 #include "FFPlayer.h"
 
+
 FFPlayer::FFPlayer(const char *data_source, JNICallbakcHelper *pHelper) {
     this->data_source = new char[strlen(data_source) + 1];
     strcpy(this->data_source, data_source);
     this->helper=pHelper;
-
+    pthread_mutex_init(&seekMutex, nullptr);
 }
 
 void *prepareTask(void *args) {
@@ -23,9 +24,9 @@ void FFPlayer::prepare() {
 }
 
 FFPlayer::~FFPlayer() {
-    if (data_source) {
-        delete data_source;
-    }
+    DELETE(data_source);
+    DELETE(helper);
+    pthread_mutex_destroy(&seekMutex);
 }
 
 void FFPlayer::prepare_() {
@@ -218,4 +219,59 @@ void FFPlayer::setRenderCallback(RenderCallback callback){
 
 int FFPlayer::getDuration() {
     return duration;
+}
+
+void FFPlayer::seek(int progress) {
+    if (progress<0||progress>duration){
+        //回调错误
+        return;
+    }
+    if (audioChannel== nullptr||videoChannel== nullptr){
+        //回调错误
+        return;
+    }
+    if (avFormatContext== nullptr){
+        //回调错误
+        return;
+    }
+    // FFmpeg 大部分单位 == 时间基AV_TIME_BASE
+    /**
+     * 1.formatContext 安全问题
+     * 2.-1 代表默认情况，FFmpeg自动选择 音频 还是 视频 做 seek，  模糊：0视频  1音频
+     * 3. AVSEEK_FLAG_ANY（老实） 直接精准到 拖动的位置，问题：如果不是关键帧，B帧 可能会造成 花屏情况
+     *    AVSEEK_FLAG_BACKWARD（则优  8的位置 B帧 ， 找附件的关键帧 6，如果找不到他也会花屏）
+     *    AVSEEK_FLAG_FRAME 找关键帧（非常不准确，可能会跳的太多），一般不会直接用，但是会配合用
+     */
+    // 假设出了花屏，AVSEEK_FLAG_BACKWARD | AVSEEK_FLAG_FRAME， 缺点：慢一些
+    // 有一点点冲突，后面再看 （则优  | 配合找关键帧）
+    // av_seek_frame(formatContext, -1, progress * AV_TIME_BASE, AVSEEK_FLAG_BACKWARD | AVSEEK_FLAG_FRAME);
+
+    // 音视频正在播放，用户去 seek，我是不是应该停掉播放的数据  音频1frames 1packets，  视频1frames 1packets 队列
+
+    //avFormatContext涉及到多线程操作，加锁
+    pthread_mutex_lock(&seekMutex);
+    int ret=av_seek_frame(avFormatContext, -1, progress * AV_TIME_BASE,   AVSEEK_FLAG_FRAME);
+    if (ret<0){
+       //回调错误
+        return;
+    }
+    //清除数据
+    if (videoChannel){
+        videoChannel->packets.setWork(0);
+        videoChannel->frames.setWork(0);
+        videoChannel->packets.clear();
+        videoChannel->frames.clear();
+        videoChannel->packets.setWork(1);
+        videoChannel->frames.setWork(1);
+    }
+
+    if (audioChannel){
+        audioChannel->packets.setWork(0);
+        audioChannel->frames.setWork(0);
+        audioChannel->packets.clear();
+        audioChannel->frames.clear();
+        audioChannel->packets.setWork(1);
+        audioChannel->frames.setWork(1);
+    }
+    pthread_mutex_unlock(&seekMutex);
 }
