@@ -217,6 +217,9 @@ int AudioChannel::getPCM() {
         //6.3 设置每一帧的时间戳  // audio_time == 0.00000 0.0231233 0.035454 就是音频播放的时间搓
         //ffmpeg 采用了无理数的概念，用多少多少分之一的形式避免精度损失
         audioStamp=frame->best_effort_timestamp*av_q2d(timeBase);
+        if(helper){
+            helper->onProgress(THREAD_CHILD,audioStamp);
+        }
 
         break; // 利用while循环 来写我们的逻辑
     } // while end
@@ -414,7 +417,5 @@ void AudioChannel::audio_play() {
    */
     bqPlayerCallback(bqPlayerBufferQueue, this);
     LOGI(TAG,"6、手动激活回调函数 Success");
-
-
 
 }

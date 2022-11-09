@@ -32,6 +32,7 @@ private:
     JNICallbakcHelper *helper=0;
     int isplaying=0;
     RenderCallback renderCallback;
+    int duration;
 public:
     FFPlayer(const char *data_source, JNICallbakcHelper *pHelper);
     ~FFPlayer();
@@ -40,6 +41,8 @@ public:
     void start();
     void start_();
     void setRenderCallback(RenderCallback callback);
+
+    int getDuration();
 };
 
 

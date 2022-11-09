@@ -5,7 +5,8 @@ package com.xcp.ffplayer;
  * qq:1550540124
  * 热爱生活每一天！
  */
-public interface PrepareListener {
+public interface PlayerListener {
     void onPrepared();
     void onError(String errMsg);
+    void onProgress(int progress);
 }

@@ -14,6 +14,7 @@ JNICallbakcHelper::JNICallbakcHelper(JavaVM *pVm, JNIEnv *pEnv, jobject jObject)
     jclass  ffPlayerclass=pEnv->GetObjectClass(jObject);
     mid_prepared=pEnv->GetMethodID(ffPlayerclass,"onPrepared","()V");
     mid_error=pEnv->GetMethodID(ffPlayerclass,"onError","(I)V");
+    mid_progress=pEnv->GetMethodID(ffPlayerclass,"onProgress","(I)V");
 }
 JNICallbakcHelper::~JNICallbakcHelper() {
 
@@ -46,6 +47,19 @@ void JNICallbakcHelper::onError(int threadMode,int errorCode) {
         JNIEnv *env_child;
         this->pVm->AttachCurrentThread(&env_child,0);
         env_child->CallVoidMethod(this->jObject,mid_error,errorCode);
+        this->pVm->DetachCurrentThread();
+    }
+}
+
+void JNICallbakcHelper::onProgress(int threadMode,int progress) {
+    if (threadMode==THREAD_MAIN){
+        pEnv->CallVoidMethod(this->jObject,mid_progress,progress);
+    }else if (threadMode==THREAD_CHILD){
+        //子线程要先attached到jvm上
+        // 子线程 env也不可以跨线程吧 对的   全新的env
+        JNIEnv *env_child;
+        this->pVm->AttachCurrentThread(&env_child,0);
+        env_child->CallVoidMethod(this->jObject,mid_progress,progress);
         this->pVm->DetachCurrentThread();
     }
 }

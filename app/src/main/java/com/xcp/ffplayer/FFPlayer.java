@@ -23,7 +23,7 @@ import android.view.SurfaceView;
 public class FFPlayer implements SurfaceHolder.Callback {
 
     private String dataSource;
-    private PrepareListener preparedListener;
+    private PlayerListener playerListener;
     private SurfaceHolder surfaceHolder;
 
     public FFPlayer() {
@@ -33,8 +33,8 @@ public class FFPlayer implements SurfaceHolder.Callback {
         this.dataSource = dataSource;
     }
 
-    public void setPreparedListener(PrepareListener listener) {
-        this.preparedListener = listener;
+    public void setPlayerListener(PlayerListener listener) {
+        this.playerListener = listener;
     }
 
     public void prepare() {
@@ -60,8 +60,8 @@ public class FFPlayer implements SurfaceHolder.Callback {
      * 供jni反射调用
      */
     public void onPrepared() {
-        if (preparedListener != null) {
-            preparedListener.onPrepared();
+        if (playerListener != null) {
+            playerListener.onPrepared();
         }
     }
 
@@ -69,7 +69,7 @@ public class FFPlayer implements SurfaceHolder.Callback {
      * 供jni反射调用
      */
     public void onError(int errorCode) {
-        if (preparedListener != null) {
+        if (playerListener != null) {
             String msg = null;
             switch (errorCode) {
                 case FFMPEG_CAN_NOT_OPEN_URL:
@@ -94,8 +94,16 @@ public class FFPlayer implements SurfaceHolder.Callback {
                     msg = "没有音视频";
                     break;
             }
-            preparedListener.onError(msg);
+            playerListener.onError(msg);
         }
+    }
+
+    /**
+     * 播放时间进度回调，通过jni反射调用java
+     * @param progress
+     */
+    public void onProgress(int progress) {
+        playerListener.onProgress(progress);
     }
 
     public void setSurfaceView(SurfaceView surfaceView) {
@@ -123,6 +131,15 @@ public class FFPlayer implements SurfaceHolder.Callback {
 
     }
 
+
+    public int getDuration() {
+        return nativeGetDuration();
+    }
+
+    public void setProgress(int progress) {
+        nativeSetProgress(progress);
+    }
+
     private native void nativePrepare(String dataSource);
 
     private native void nativeStart();
@@ -133,5 +150,8 @@ public class FFPlayer implements SurfaceHolder.Callback {
 
     private native void nativeSetSurface(Surface surface);
 
+    private native int nativeGetDuration();
+
+    private native void nativeSetProgress(int progress) ;
 
 }

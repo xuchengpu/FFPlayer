@@ -128,3 +128,18 @@ Java_com_xcp_ffplayer_FFPlayer_nativeSetSurface(JNIEnv *env, jobject thiz, jobje
 
     pthread_mutex_unlock(&mutex);
 }
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_xcp_ffplayer_FFPlayer_nativeGetDuration(JNIEnv *env, jobject thiz) {
+    if (mPlayer){
+       return mPlayer->getDuration();
+    }
+    return 0;
+
+}
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_xcp_ffplayer_FFPlayer_nativeSetProgress(JNIEnv *env, jobject thiz, jint progress) {
+
+
+}

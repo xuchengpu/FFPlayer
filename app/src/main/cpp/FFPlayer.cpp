@@ -62,6 +62,9 @@ void FFPlayer::prepare_() {
         }
         return;
     }
+
+    duration=avFormatContext->duration/AV_TIME_BASE;//ffmpeg里的时间都需要通过时间基转换
+
     //第三步：根据流信息，流的个数，用循环来找
     for (int i = 0; i <avFormatContext->nb_streams ; ++i) {
         //第四步：获取媒体流（视频，音频）
@@ -111,6 +114,9 @@ void FFPlayer::prepare_() {
         //第十步：从解码器参数中获取流的类型 视频、音频
         if (codecpar->codec_type==AVMEDIA_TYPE_AUDIO){
             audioChannel= new AudioChannel(i,avCodecContext,timeBase);
+            if (helper){
+                audioChannel->setJniCallbackHelper(helper);
+            }
         }else if (codecpar->codec_type==AVMEDIA_TYPE_VIDEO){
 
             //6.7适配部分视频中包含封面流 封面流不能当成视频流处理，拦截
@@ -208,4 +214,8 @@ void FFPlayer::start_(){
 
 void FFPlayer::setRenderCallback(RenderCallback callback){
     renderCallback=callback;
+}
+
+int FFPlayer::getDuration() {
+    return duration;
 }

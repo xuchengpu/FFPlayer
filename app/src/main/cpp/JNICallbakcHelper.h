@@ -15,11 +15,13 @@ private:
     jobject jObject;
     jmethodID mid_prepared;
     jmethodID mid_error;
+    jmethodID mid_progress;
 public:
     JNICallbakcHelper(JavaVM *pVm, JNIEnv *pEnv, jobject jObject);
     ~JNICallbakcHelper();
     void onPrepared(int threadMode);
     void onError(int threadMode,int errorCode);
+    void onProgress(int threadMode,int progress);
 };
 
 

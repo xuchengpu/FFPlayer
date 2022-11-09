@@ -7,6 +7,7 @@
 
 #include "safe_queue.h"
 #include "logging.h"
+#include "JNICallbakcHelper.h"
 
 
 extern "C" {
@@ -27,6 +28,7 @@ public:
     bool isPlaying;//是否播放
     //6.1 播放流的时间基准,音视频流都有，音频流和视频流同步用
     AVRational timeBase;
+    JNICallbakcHelper *helper=0;
 
     BaseChannel(int stream_index, AVCodecContext *avCodecContext,AVRational timeBase)
             : stream_index(stream_index), avCodecContext(avCodecContext), timeBase(timeBase) {
@@ -39,6 +41,10 @@ public:
     virtual ~BaseChannel() {
         packets.clear();
         frames.clear();
+    }
+
+    void setJniCallbackHelper(JNICallbakcHelper *pHelper) {
+        this->helper=pHelper;
     }
 
     /**

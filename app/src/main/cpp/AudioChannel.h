@@ -37,7 +37,7 @@ public:
     // 播放器队列接口
     SLAndroidSimpleBufferQueueItf bqPlayerBufferQueue = 0;
 
-    //6.3 记录当前音频帧的时间戳
+    //6.3 记录当前音频帧的时间戳  播放了多少秒
     double audioStamp;
 
 public:
