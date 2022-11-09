@@ -42,7 +42,7 @@ VideoChannel::VideoChannel(int stream_index, AVCodecContext *avCodecContext, AVR
 }
 
 VideoChannel::~VideoChannel() {
-
+    DELETE(audioChannel);
 }
 
 void *task_video_decode(void *args) {
@@ -74,6 +74,17 @@ void VideoChannel::start() {
 }
 
 void VideoChannel::stop() {
+    DELETE(helper);
+    isPlaying= false;
+
+    pthread_join(pid_video_decode, nullptr);
+    pthread_join(pid_video_play, nullptr);
+
+    packets.setWork(0);
+    frames.setWork(0);
+
+    packets.clear();
+    frames.clear();
 
 }
 

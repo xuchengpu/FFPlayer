@@ -51,6 +51,8 @@ void FFPlayer::prepare_() {
         if (helper){
             helper->onError(THREAD_CHILD,FFMPEG_CAN_NOT_OPEN_URL);
         }
+        //释放资源
+        avformat_close_input(&avFormatContext);
         return;
     }
     //第二步：查找媒体中的音视频流的信息
@@ -61,10 +63,14 @@ void FFPlayer::prepare_() {
         if (helper){
             helper->onError(THREAD_CHILD,FFMPEG_CAN_NOT_FIND_STREAMS);
         }
+        //释放资源
+        avformat_close_input(&avFormatContext);
         return;
     }
 
     duration=avFormatContext->duration/AV_TIME_BASE;//ffmpeg里的时间都需要通过时间基转换
+
+    AVCodecContext * avCodecContext= nullptr;
 
     //第三步：根据流信息，流的个数，用循环来找
     for (int i = 0; i <avFormatContext->nb_streams ; ++i) {
@@ -78,15 +84,21 @@ void FFPlayer::prepare_() {
             if (helper){
                 helper->onError(THREAD_CHILD,FFMPEG_FIND_DECODER_FAIL);
             }
+            //释放资源
+            avformat_close_input(&avFormatContext);
+            return;
         }
         //第七步：编解码器 上下文 （这个才是真正干活的）
-        AVCodecContext * avCodecContext=avcodec_alloc_context3(avCodec);
+        avCodecContext=avcodec_alloc_context3(avCodec);
         if (!avCodecContext){
             //把错误信息反馈给Java
             LOGD(TAG, "avcodec_alloc_context3 faile");
             if (helper){
                 helper->onError(THREAD_CHILD,FFMPEG_ALLOC_CODEC_CONTEXT_FAIL);
             }
+            //释放资源
+            avcodec_free_context(&avCodecContext); // 释放此上下文 avcodec 他会考虑到，你不用管*codec
+            avformat_close_input(&avFormatContext);
             return;
         }
         //第八步：他目前是一张白纸（parameters copy codecContext）
@@ -97,6 +109,9 @@ void FFPlayer::prepare_() {
             if (helper){
                 helper->onError(THREAD_CHILD,FFMPEG_CODEC_CONTEXT_PARAMETERS_FAIL);
             }
+            //释放资源
+            avcodec_free_context(&avCodecContext); // 释放此上下文 avcodec 他会考虑到，你不用管*codec
+            avformat_close_input(&avFormatContext);
             return;
         }
         //第九步：打开解码器
@@ -107,6 +122,9 @@ void FFPlayer::prepare_() {
             if (helper){
                 helper->onError(THREAD_CHILD,FFMPEG_OPEN_DECODER_FAIL);
             }
+            //释放资源
+            avcodec_free_context(&avCodecContext); // 释放此上下文 avcodec 他会考虑到，你不用管*codec
+            avformat_close_input(&avFormatContext);
             return;
         }
         //6.1 给timebase赋值
@@ -115,7 +133,7 @@ void FFPlayer::prepare_() {
         //第十步：从解码器参数中获取流的类型 视频、音频
         if (codecpar->codec_type==AVMEDIA_TYPE_AUDIO){
             audioChannel= new AudioChannel(i,avCodecContext,timeBase);
-            if (helper){
+            if (helper&&this->duration!=0){
                 audioChannel->setJniCallbackHelper(helper);
             }
         }else if (codecpar->codec_type==AVMEDIA_TYPE_VIDEO){
@@ -132,6 +150,10 @@ void FFPlayer::prepare_() {
 
             videoChannel=new VideoChannel(i,avCodecContext,timeBase,fps);
             videoChannel->setRenderCallback(renderCallback);
+
+            if (helper&&this->duration!=0){
+                videoChannel->setJniCallbackHelper(helper);
+            }
         }
     }//循环结束
     //第十一步: 如果流中 没有音频 也没有 视频 【健壮性校验】
@@ -141,6 +163,10 @@ void FFPlayer::prepare_() {
         if (helper){
             helper->onError(THREAD_CHILD,FFMPEG_NOMEDIA);
         }
+        if (avCodecContext) {
+            avcodec_free_context(&avCodecContext); // 释放此上下文 avcodec 他会考虑到，你不用管*codec
+        }
+        avformat_close_input(&avFormatContext);
         return;
     }
     //第十二步：走到这里说明成功了，通知Java层
@@ -274,4 +300,45 @@ void FFPlayer::seek(int progress) {
         audioChannel->frames.setWork(1);
     }
     pthread_mutex_unlock(&seekMutex);
+}
+
+void *stopTask(void* args){
+    auto * ffplayer=static_cast<FFPlayer*>(args);
+    if (ffplayer){
+        ffplayer->stop_(ffplayer);
+    }
+    return nullptr; // 必须返回，坑，错误很难找
+}
+
+void FFPlayer::stop() {
+    //资源释放工作
+    //不回调到上层
+    helper= nullptr;
+    // 如果是直接释放 我们的 prepare_ start_ 线程，不能暴力释放 ，否则会有bug
+
+    // 让他 稳稳的停下来
+
+    // 我们要等这两个线程 稳稳的停下来后，我再释放DerryPlayer的所以工作
+    // 由于我们要等 所以会ANR异常
+
+    // 所以我们我们在开启一个 stop_线程 来等你 稳稳的停下来
+    // 创建子线程
+    pthread_create(&pid_stop, nullptr,stopTask,this);
+}
+
+void FFPlayer::stop_(FFPlayer* ffPlayer){
+    isplaying= false;
+    //将先前开辟的子线程绑定到主线程，你释放完了我再释放
+    pthread_join(pid_prepare, nullptr);
+    pthread_join(pid_start, nullptr);
+
+    if (avFormatContext){
+        avformat_close_input(&avFormatContext);
+        avformat_free_context(avFormatContext);
+        avFormatContext= nullptr;
+    }
+
+    DELETE(audioChannel);
+    DELETE(videoChannel);
+    DELETE(ffPlayer);
 }

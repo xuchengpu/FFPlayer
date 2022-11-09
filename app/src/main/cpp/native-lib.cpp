@@ -104,13 +104,22 @@ Java_com_xcp_ffplayer_FFPlayer_nativeStart(JNIEnv *env, jobject thiz) {
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_xcp_ffplayer_FFPlayer_nativeStop(JNIEnv *env, jobject thiz) {
-
-
+    if (mPlayer) {
+        mPlayer->stop();
+    }
 }
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_xcp_ffplayer_FFPlayer_nativeRelease(JNIEnv *env, jobject thiz) {
 
+    //涉及到多线程，使用锁来处理
+    pthread_mutex_lock(&mutex);
+    //释放原来的窗口
+    if (window) {
+        ANativeWindow_release(window);
+        window = nullptr;
+    }
+    pthread_mutex_unlock(&mutex);
 
 }
 extern "C"

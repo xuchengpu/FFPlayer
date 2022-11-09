@@ -34,6 +34,7 @@ private:
     RenderCallback renderCallback;
     int duration;
     pthread_mutex_t seekMutex;
+    pthread_t pid_stop;
 public:
     FFPlayer(const char *data_source, JNICallbakcHelper *pHelper);
     ~FFPlayer();
@@ -41,6 +42,8 @@ public:
     void prepare_();
     void start();
     void start_();
+    void stop();
+    void stop_(FFPlayer* ffPlayer);
     void setRenderCallback(RenderCallback callback);
 
     int getDuration();
