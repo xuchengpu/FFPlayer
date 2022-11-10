@@ -91,12 +91,12 @@ void AudioChannel::start() {
 }
 
 void AudioChannel::stop() {
-    DELETE(helper);
-    isPlaying= false;
 
     pthread_join(pid_audio_decode, nullptr);
     pthread_join(pid_audio_play, nullptr);
     //保证两个线程执行完毕我再释放
+
+    isPlaying= false;
 
     packets.setWork(0);
     frames.setWork(0);

@@ -228,11 +228,11 @@ void FFPlayer::start_(){
             }
         }else{
             //av_read_frame出现错误，跳出循环
-            LOGD(TAG, "FFPlayer::start_() av_read_frame error ");
+            LOGD(TAG, "FFPlayer::start_() av_read_frame 错误跳出循环 ");
             break;
         }
     }
-    LOGD(TAG, "FFPlayer::start_() av_read_frame 错误跳出循环 ");
+    LOGD(TAG, "FFPlayer::start_() 结束循环 ");
     isplaying=0;
     videoChannel->stop();
     audioChannel->stop();
@@ -314,6 +314,13 @@ void FFPlayer::stop() {
     //资源释放工作
     //不回调到上层
     helper= nullptr;
+
+    if (audioChannel) {
+        audioChannel-> helper= nullptr;
+    }
+    if (videoChannel) {
+        videoChannel->helper = nullptr;
+    }
     // 如果是直接释放 我们的 prepare_ start_ 线程，不能暴力释放 ，否则会有bug
 
     // 让他 稳稳的停下来

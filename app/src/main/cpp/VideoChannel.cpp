@@ -74,11 +74,12 @@ void VideoChannel::start() {
 }
 
 void VideoChannel::stop() {
-    DELETE(helper);
-    isPlaying= false;
+
 
     pthread_join(pid_video_decode, nullptr);
     pthread_join(pid_video_play, nullptr);
+
+    isPlaying= false;
 
     packets.setWork(0);
     frames.setWork(0);

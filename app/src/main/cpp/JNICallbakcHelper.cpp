@@ -5,8 +5,8 @@
 #include "JNICallbakcHelper.h"
 
 JNICallbakcHelper::JNICallbakcHelper(JavaVM *pVm, JNIEnv *pEnv, jobject jObject) : pVm(pVm),
-                                                                                          pEnv(pEnv),
-                                                                                          jObject(jObject) {
+                                                                                          pEnv(pEnv)
+                                                                                           {
     // this->job = job; // 坑： jobject不能跨越线程，不能跨越函数，必须全局引用
 
     this->jObject=pEnv->NewGlobalRef(jObject);

@@ -51,7 +51,7 @@ public:
             //队列工作中……
             queue.push(value);//插入数据包
             pthread_cond_signal(&cond);//插入数据包后，发出信号，唤醒当前条件下的线程，通知去取
-            LOGD(TAG, "insertToQueue ");
+//            LOGD(TAG, "insertToQueue ");
         } else {
             //队列没有工作，回调到外界通知释放资源
             if (releaseCallback) {
@@ -74,7 +74,7 @@ public:
         if (!queue.empty()) {
             value = queue.front();
             queue.pop();//从队列中移除出去
-            LOGD(TAG, "getQueueAndDel ");
+//            LOGD(TAG, "getQueueAndDel ");
             pthread_mutex_unlock(&mutex);
             return 1;//1表示true;
         }
